@@ -204,15 +204,23 @@ problem and not workflow logic: the other four parallel calls used the
 identical credential and succeeded, and an immediate retry of the same
 `find_appointment` succeeded.
 
-**Fixed** by adding `retryOnFail: true, maxTries: 3, waitBetweenTries: 400` to
-all 15 `httpRequest` nodes that call the calendar API. Redeployed, reactivated,
-full five-flow matrix re-run fresh with read-backs — all green.
+**Addressed** by adding `retryOnFail: true, maxTries: 3, waitBetweenTries: 400`
+as a node-level n8n setting to all 15 `httpRequest` nodes that call the
+calendar API. Redeployed, reactivated, full five-flow matrix re-run fresh with
+read-backs — all green.
+
+*Verified:* the setting is present at node level (the tier n8n reads) on all
+15 nodes, countable in this repo. *Recorded-in-log:* the post-fix five-flow
+re-run above was green. *Not tested:* no run in this session or in this repo
+independently induced a `401` and observed a retry fire — the fix's presence
+and the green re-run are the only evidence, not a reproduction of the retry
+itself.
 
 The fix is in this repo (see the verification snippet in
 [`runbook-live-pilot.md` §2](./runbook-live-pilot.md#retry-hardening)):
 
 ```
-15/15 http nodes retry-hardened; 76 nodes total
+15/15 http nodes retry-hardened (node-level); 76 nodes total
 ```
 
 #### Final-gate conversations
@@ -303,7 +311,11 @@ print(len(d['nodes']), 'nodes;', len(d['connections']), 'connection keys')"
 
 **GO on the booking core**: availability, book, find, cancel and reschedule
 all green with fresh calendar read-backs, plus real-conversation proof and
-compliance proof. Two real bugs were found and fixed during verification —
-neither would have surfaced without running the thing live against a real
-calendar — and both were confirmed resolved by fresh re-tests rather than
-patched and assumed.
+compliance proof. Two real bugs were found during verification — neither
+would have surfaced without running the thing live against a real calendar.
+Bug 1 (date grounding) was fixed and the fix confirmed by a fresh, targeted
+re-test of the exact failing scenario. Bug 2 (transient 401) was addressed at
+the node-configuration level and the full five-flow matrix re-run green
+afterward, but that re-run did not reproduce the intermittent 401, so it
+confirms no regression rather than confirming the retry mechanism itself
+fired and resolved the failure — see Bug 2 above for the bounded claim.

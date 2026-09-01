@@ -33,11 +33,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -60,6 +55,9 @@
       "name": "Get GHL Free Slots",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         256,
         0
@@ -260,11 +258,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"locationId\": \"<LOCATION_ID>\", \"name\": $json.body.name, \"phone\": $json.body.phone, \"source\": \"Barber Demo Line (Northbridge Barbers preview)\" } }}"
@@ -273,6 +266,9 @@
       "name": "GHL Upsert Contact",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         480,
         260
@@ -287,7 +283,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// [Barber Demo] Prepare GHL appointment payload\nvar body = $('Webhook - Book Appointment').first().json.body;\nvar start = body.slot;\nvar d = new Date(start);\nvar endD = new Date(d.getTime() + 30 * 60000);\nvar end = endD.toISOString();\nvar contactUpsert = $('GHL Upsert Contact').first().json;\nvar contactId = (contactUpsert && contactUpsert.contact) ? contactUpsert.contact.id : null;\nvar notes = 'Rise AI Demo Booking (Northbridge Barbers)\\n\\n'\n  + 'Name: ' + body.name + '\\n'\n  + 'Phone: ' + body.phone + '\\n'\n  + 'Service: ' + body.service + '\\n'\n  + 'Requested slot: ' + start\n  + (body.notes ? ('\\nNotes: ' + body.notes) : '')\n  + '\\n\\nBooked via The Rise AI barber demo phone receptionist. DEMO CALENDAR — not a live diary.';\nreturn [{ json: {\n  calendarId: '<CALENDAR_ID>',\n  locationId: '<LOCATION_ID>',\n  contactId: contactId,\n  startTime: start,\n  endTime: end,\n  title: '[Barber Demo] ' + body.name + ' \\u2014 ' + body.service,\n  notes: notes,\n  appointmentStatus: 'confirmed',\n  ignoreFreeSlotValidation: true\n} }];"
+        "jsCode": "// [Barber Demo] Prepare GHL appointment payload\nvar body = $('Webhook - Book Appointment').first().json.body;\nvar start = body.slot;\nvar d = new Date(start);\nvar endD = new Date(d.getTime() + 30 * 60000);\nvar end = endD.toISOString();\nvar contactUpsert = $('GHL Upsert Contact').first().json;\nvar contactId = (contactUpsert && contactUpsert.contact) ? contactUpsert.contact.id : null;\nvar notes = 'Rise AI Demo Booking (Northbridge Barbers)\\n\\n'\n  + 'Name: ' + body.name + '\\n'\n  + 'Phone: ' + body.phone + '\\n'\n  + 'Service: ' + body.service + '\\n'\n  + 'Requested slot: ' + start\n  + (body.notes ? ('\\nNotes: ' + body.notes) : '')\n  + '\\n\\nBooked via The Rise AI barber demo phone receptionist. DEMO CALENDAR \u2014 not a live diary.';\nreturn [{ json: {\n  calendarId: '<CALENDAR_ID>',\n  locationId: '<LOCATION_ID>',\n  contactId: contactId,\n  startTime: start,\n  endTime: end,\n  title: '[Barber Demo] ' + body.name + ' \\u2014 ' + body.service,\n  notes: notes,\n  appointmentStatus: 'confirmed',\n  ignoreFreeSlotValidation: true\n} }];"
       },
       "id": "bd-14-prepare-fields",
       "name": "Prepare GHL Booking Fields",
@@ -313,11 +309,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json }}"
@@ -326,6 +317,9 @@
       "name": "GHL Create Appointment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         992,
         260
@@ -392,8 +386,8 @@
     {
       "parameters": {
         "sendTo": "owner@example.com",
-        "subject": "=New Barber Demo Booking (Northbridge Barbers preview) — {{ $('Webhook - Book Appointment').first().json.body.name }}",
-        "message": "=<h2 style=\"color:#2c3e50;font-family:Arial,sans-serif\">New Barber Demo Booking</h2><p style=\"color:#c0392b;font-weight:bold;font-family:Arial,sans-serif\">DEMO CALENDAR — not a live diary.</p><table style=\"border-collapse:collapse;width:100%;max-width:500px;font-family:Arial,sans-serif\"><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Name</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.name }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Phone</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.phone }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Service</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.service }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Slot</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.slot }}</td></tr></table><p style=\"color:#6c757d;font-size:13px;font-family:Arial,sans-serif;margin-top:20px\">Booked automatically via The Rise AI barber demo phone receptionist (Northbridge Barbers preview).</p>",
+        "subject": "=New Barber Demo Booking (Northbridge Barbers preview) \u2014 {{ $('Webhook - Book Appointment').first().json.body.name }}",
+        "message": "=<h2 style=\"color:#2c3e50;font-family:Arial,sans-serif\">New Barber Demo Booking</h2><p style=\"color:#c0392b;font-weight:bold;font-family:Arial,sans-serif\">DEMO CALENDAR \u2014 not a live diary.</p><table style=\"border-collapse:collapse;width:100%;max-width:500px;font-family:Arial,sans-serif\"><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Name</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.name }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Phone</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.phone }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Service</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.service }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Slot</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.slot }}</td></tr></table><p style=\"color:#6c757d;font-size:13px;font-family:Arial,sans-serif;margin-top:20px\">Booked automatically via The Rise AI barber demo phone receptionist (Northbridge Barbers preview).</p>",
         "options": {}
       },
       "id": "bd-18-notify-email",
@@ -549,7 +543,7 @@
       "parameters": {
         "from": "+61491570006",
         "to": "={{ $('Webhook - Book Appointment').first().json.body.phone }}",
-        "message": "=The Rise AI Barber Demo: Hi {{ $('Webhook - Book Appointment').first().json.body.name }}, your {{ $('Webhook - Book Appointment').first().json.body.service }} is confirmed. — Northbridge Barbers (via The Rise AI). Reply STOP to opt out.",
+        "message": "=The Rise AI Barber Demo: Hi {{ $('Webhook - Book Appointment').first().json.body.name }}, your {{ $('Webhook - Book Appointment').first().json.body.service }} is confirmed. \u2014 Northbridge Barbers (via The Rise AI). Reply STOP to opt out.",
         "options": {}
       },
       "id": "bd-22-twilio-sms",
@@ -567,7 +561,7 @@
           "name": "twilioApi credential"
         }
       },
-      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
+      "notes": "GUARDED \u2014 disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -584,11 +578,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"type\": \"SMS\", \"contactId\": $('GHL Upsert Contact').first().json.contact.id, \"message\": \"The Rise AI Barber Demo: Hi \" + ($('Webhook - Book Appointment').first().json.body.name) + \", your \" + ($('Webhook - Book Appointment').first().json.body.service) + \" is confirmed. \\u2014 Northbridge Barbers (via The Rise AI). Reply STOP to opt out.\" } }}"
@@ -597,6 +586,9 @@
       "name": "GHL SMS Confirmation (guarded, LC Phone fallback)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         2528,
         200
@@ -609,7 +601,7 @@
       },
       "onError": "continueRegularOutput",
       "disabled": true,
-      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
+      "notes": "GUARDED \u2014 disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -720,11 +712,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"locationId\": \"<LOCATION_ID>\", \"query\": $json.body.phone, \"pageLimit\": 10 } }}"
@@ -733,6 +720,9 @@
       "name": "GHL Search Contact by Phone",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         480,
         780
@@ -825,11 +815,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -856,6 +841,9 @@
       "name": "GHL List Calendar Events",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         1248,
         620
@@ -942,17 +930,15 @@
               "value": "2021-07-28"
             }
           ]
-        },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
         }
       },
       "id": "bd-40-get-appt-detail",
       "name": "GHL Get Appointment Detail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         2016,
         540
@@ -1083,17 +1069,15 @@
               "value": "2021-07-28"
             }
           ]
-        },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
         }
       },
       "id": "bd-53-get-appt",
       "name": "GHL Get Appointment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         480,
         1280
@@ -1172,17 +1156,15 @@
               "value": "2021-07-28"
             }
           ]
-        },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
         }
       },
       "id": "bd-56-get-contact",
       "name": "GHL Get Contact",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         992,
         1200
@@ -1275,11 +1257,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"appointmentStatus\": \"cancelled\" } }}"
@@ -1288,6 +1265,9 @@
       "name": "GHL Cancel Appointment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         1760,
         1040
@@ -1505,7 +1485,7 @@
           "name": "twilioApi credential"
         }
       },
-      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
+      "notes": "GUARDED \u2014 disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -1522,11 +1502,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"type\": \"SMS\", \"contactId\": ($('GHL Get Contact').first().json.contact || $('GHL Get Contact').first().json).id, \"message\": \"The Rise AI Barber Demo: Hi, your Northbridge Barbers appointment has been cancelled as requested. (via The Rise AI.) Reply STOP to opt out.\" } }}"
@@ -1535,6 +1510,9 @@
       "name": "Cancel GHL SMS (guarded, LC Phone fallback)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         3040,
         1040
@@ -1547,7 +1525,7 @@
       },
       "onError": "continueRegularOutput",
       "disabled": true,
-      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
+      "notes": "GUARDED \u2014 disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -1675,17 +1653,15 @@
               "value": "2021-07-28"
             }
           ]
-        },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
         }
       },
       "id": "bd-73-get-appt",
       "name": "GHL Get Appointment (Reschedule)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         480,
         1780
@@ -1764,17 +1740,15 @@
               "value": "2021-07-28"
             }
           ]
-        },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
         }
       },
       "id": "bd-76-get-contact",
       "name": "GHL Get Contact (Reschedule)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         992,
         1700
@@ -1880,11 +1854,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"startTime\": $json.startTime, \"endTime\": $json.endTime } }}"
@@ -1893,6 +1862,9 @@
       "name": "GHL Update Appointment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         2016,
         1540
@@ -2110,7 +2082,7 @@
           "name": "twilioApi credential"
         }
       },
-      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
+      "notes": "GUARDED \u2014 disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -2127,11 +2099,6 @@
             }
           ]
         },
-        "options": {
-          "retryOnFail": true,
-          "maxTries": 3,
-          "waitBetweenTries": 400
-        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"type\": \"SMS\", \"contactId\": ($('GHL Get Contact (Reschedule)').first().json.contact || $('GHL Get Contact (Reschedule)').first().json).id, \"message\": \"The Rise AI Barber Demo: Hi, your Northbridge Barbers appointment has been moved as requested. (via The Rise AI.) Reply STOP to opt out.\" } }}"
@@ -2140,6 +2107,9 @@
       "name": "Reschedule GHL SMS (guarded, LC Phone fallback)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 400,
       "position": [
         3296,
         1540
@@ -2152,7 +2122,7 @@
       },
       "onError": "continueRegularOutput",
       "disabled": true,
-      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
+      "notes": "GUARDED \u2014 disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {

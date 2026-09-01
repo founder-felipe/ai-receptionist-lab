@@ -46,7 +46,8 @@ two genuine bugs that mocks did not catch:
 2. **Transient provider 401 on parallel fan-out.** One of five near-simultaneous
    calendar detail requests intermittently returned `401 "Command timed out"`,
    making `find_appointment` report `not_found` for an appointment that existed.
-   Fixed with retry hardening on every calendar-calling HTTP node.
+   Addressed with retry hardening on every calendar-calling HTTP node (see note
+   below on what this claim does and does not cover).
 
 Both fixes are present in this repository, not just described:
 
@@ -55,12 +56,22 @@ grep -c 'system__time' agents/elevenlabs/barber-agent-config.json      # ≥ 1
 python3 -c "
 import json; d=json.load(open('n8n/barber-demo-handle-agent-tools.json'))
 http=[n for n in d['nodes'] if n.get('type')=='n8n-nodes-base.httpRequest']
-ok=[n for n in http if n['parameters']['options'].get('retryOnFail') is True
-    and n['parameters']['options'].get('maxTries')==3
-    and n['parameters']['options'].get('waitBetweenTries')]
-print(len(ok),'/',len(http),'retry-hardened;',len(d['nodes']),'nodes')"
+ok=[n for n in http if n.get('retryOnFail') is True
+    and n.get('maxTries')==3
+    and n.get('waitBetweenTries')]
+print(len(ok),'/',len(http),'retry-hardened (node-level);',len(d['nodes']),'nodes')"
 # 15 / 15 retry-hardened; 76 nodes
 ```
+
+**What "verified" covers and what it does not:** *verified* — this export
+carries `retryOnFail: true, maxTries: 3, waitBetweenTries: 400` as node-level
+n8n settings (the tier n8n actually reads, the same tier as this export's own
+`onError`) on all 15 calendar-calling HTTP nodes. *Recorded-in-log* — the
+post-fix five-flow re-run on 2026-08-21 was green (see the verification log).
+Neither this repository nor that log independently exercised the retry path
+itself: no test in this tree, or in the 2026-08-21 session, induced a `401`
+and observed a retry fire. "Addressed" is bounded by those two facts — it is
+not a claim that retries were exercised end-to-end.
 
 Evidence: [`docs/verification-2026-08-21.md`](./docs/verification-2026-08-21.md).
 

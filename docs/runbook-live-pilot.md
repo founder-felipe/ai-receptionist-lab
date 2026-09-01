@@ -93,9 +93,13 @@ Two contract rules the workflow enforces, both worth re-checking after any edit:
 ### Retry hardening
 
 All 15 `httpRequest` nodes that call the GHL API carry
-`retryOnFail: true, maxTries: 3, waitBetweenTries: 400` (ms). This is not
-decoration — see the transient-401 bug in the verification log. Verify after
-any workflow edit:
+`retryOnFail: true, maxTries: 3, waitBetweenTries: 400` (ms) as **node-level**
+n8n settings — the same tier as this export's `onError`, and the tier n8n
+actually reads (`parameters.options` is not a setting n8n honours for retry).
+This is not decoration once set at node level — see the transient-401 bug in
+the verification log — but the retry path itself was never independently
+exercised: no run induced a `401` and observed a retry fire. Verify after any
+workflow edit:
 
 ```bash
 python3 -c "
@@ -103,12 +107,12 @@ import json
 d = json.load(open('n8n/barber-demo-handle-agent-tools.json'))
 http = [n for n in d['nodes'] if n.get('type') == 'n8n-nodes-base.httpRequest']
 ok = [n for n in http
-      if n['parameters']['options'].get('retryOnFail') is True
-      and n['parameters']['options'].get('maxTries') == 3
-      and n['parameters']['options'].get('waitBetweenTries')]
-print(f'{len(ok)}/{len(http)} http nodes retry-hardened; {len(d[\"nodes\"])} nodes total')
+      if n.get('retryOnFail') is True
+      and n.get('maxTries') == 3
+      and n.get('waitBetweenTries')]
+print(f'{len(ok)}/{len(http)} http nodes retry-hardened (node-level); {len(d[\"nodes\"])} nodes total')
 "
-# Expected: 15/15 http nodes retry-hardened; 76 nodes total
+# Expected: 15/15 http nodes retry-hardened (node-level); 76 nodes total
 ```
 
 ---

@@ -23,7 +23,7 @@ def normalise_phone(raw: str | None, region: str = "AU") -> str | None:
     """Return E.164-formatted phone string, or ``None`` if invalid.
 
     Accepts free-form caller input ("0491 570 006", "+61 491 570 006",
-    "0400-000-000"). Uses ``phonenumbers`` with ``region`` as the default
+    "0491-570-006"). Uses ``phonenumbers`` with ``region`` as the default
     country code when no ``+`` prefix is present.
     """
     if not raw or not isinstance(raw, str):
