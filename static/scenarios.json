@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Happy path — Saturday fade",
+    "utterances": ["I want a fade", "Saturday 2pm", "Sam", "0491 570 110"]
+  },
+  {
+    "name": "Indecisive caller",
+    "utterances": ["uhh maybe a haircut?", "fade", "this saturday afternoon", "2pm works", "Alex", "+61 408 222 333"]
+  },
+  {
+    "name": "Out of scope question",
+    "utterances": ["how much is a fade?", "fade", "next saturday 11am", "Jordan", "0491 570 156"]
+  }
+]

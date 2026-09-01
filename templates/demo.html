@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}The Rise AI — {{ venue.name }} Receptionist Demo{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="wordmark">THE RISE AI</span>
+    <span class="topbar__sep">·</span>
+    <span class="venue-name">{{ venue.name }}</span>
+    <span class="topbar__tagline">live missed-call recovery</span>
+  </div>
+  <div class="topbar__mode">
+    <span class="mode-pill mode-pill--{{ mode|lower }}">{{ mode }}</span>
+  </div>
+</header>
+
+<main id="grid" class="grid" hx-ext="sse" hx-sse-connect="/events?call_id=PLACEHOLDER">
+  <!-- Panel 1: Incoming Call -->
+  <section class="panel panel--call" aria-labelledby="panel-call-h">
+    <h2 id="panel-call-h" class="panel__title">(1) Incoming Call</h2>
+    <div class="call-card">
+      <div class="call-card__phone">
+        <span class="phone-icon" aria-hidden="true">&#9742;</span>
+        <span class="call-card__number">{{ venue.phone }}</span>
+      </div>
+      <button id="ring-btn"
+              class="btn btn--primary btn--ring"
+              hx-post="/ring"
+              hx-swap="none">
+        Ring the venue
+      </button>
+      <div id="ring-status" class="call-card__status" data-status="idle">
+        <span class="dot dot--idle"></span>
+        <span class="call-card__status-label">status: idle</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Panel 3: SMS Preview -->
+  <section class="panel panel--sms" aria-labelledby="panel-sms-h">
+    <h2 id="panel-sms-h" class="panel__title">(3) SMS Preview</h2>
+    <div id="sms-stream"
+         class="sms-stream"
+         hx-sse-swap="sms_sent">
+      <p class="panel__empty">No SMS sent yet.</p>
+    </div>
+  </section>
+
+  <!-- Panel 2: Receptionist Transcript -->
+  <section class="panel panel--transcript" aria-labelledby="panel-transcript-h">
+    <h2 id="panel-transcript-h" class="panel__title">(2) Receptionist Transcript</h2>
+
+    <div id="transcript"
+         class="transcript"
+         hx-sse-swap="transcript_line"
+         hx-swap="beforeend">
+      <p class="panel__empty">Click "Ring the venue" to begin.</p>
+    </div>
+
+    <div class="transcript__controls">
+      <form id="utterance-form" class="utterance-form" autocomplete="off">
+        <input type="text"
+               id="utterance-input"
+               name="utterance"
+               placeholder="Type a caller line..."
+               class="input">
+        <button type="submit" class="btn btn--ghost">Send</button>
+      </form>
+
+      <div class="scenario-row">
+        <label for="scenario-select" class="scenario-row__label">Scenario:</label>
+        <select id="scenario-select" class="select">
+          <option value="">Loading…</option>
+        </select>
+        <span class="scenario-row__count">({{ scenario_count }} available)</span>
+        <button type="button" id="play-scenario-btn" class="btn btn--accent">Play scenario</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Panel 4: Owner Notification -->
+  <section class="panel panel--notify" aria-labelledby="panel-notify-h">
+    <h2 id="panel-notify-h" class="panel__title">(4) Owner Notification</h2>
+    <div id="notify-stream"
+         class="notify-stream"
+         hx-sse-swap="notify_result"
+         hx-swap="beforeend">
+      <p class="panel__empty">No notifications yet.</p>
+    </div>
+    <div id="owner-notified-stream"
+         class="notify-stream notify-stream--summary"
+         hx-sse-swap="owner_notified"
+         hx-swap="beforeend"></div>
+  </section>
+
+  <!-- Panel 5: Leads Logged -->
+  <section class="panel panel--leads" aria-labelledby="panel-leads-h">
+    <div class="panel__header">
+      <h2 id="panel-leads-h" class="panel__title">(5) Leads Logged</h2>
+      <button id="reset-btn"
+              class="btn btn--reset"
+              hx-post="/reset"
+              hx-swap="none">
+        Reset demo
+      </button>
+    </div>
+    <div id="leads-wrap"
+         hx-sse-swap="lead_saved"
+         hx-target="#leads-tbody"
+         hx-swap="beforeend">
+      {% include "partials/leads_table.html" %}
+    </div>
+  </section>
+</main>
+{% endblock %}

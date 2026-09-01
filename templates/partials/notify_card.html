@@ -1,0 +1,5 @@
+<div class="notify-card notify-card--{{ status|default('ok') }}">
+  <span class="dot dot--{{ 'green' if status == 'ok' or status == 'sent' else 'yellow' }}"></span>
+  <span class="notify-card__channel">{{ channel }}</span>
+  <span class="notify-card__status">{{ status|default('sent') }}</span>
+</div>

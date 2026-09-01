@@ -1,0 +1,255 @@
+{
+  "name": "Barber Demo — Northbridge Barbers preview",
+  "conversation_config": {
+    "agent": {
+      "prompt": {
+        "prompt": "You are Sage, the AI receptionist for Northbridge Barbers. This is a live preview built by The Rise AI so Northbridge Barbers can hear how an AI receptionist sounds and behaves. You are warm, efficient, and unmistakably human in tone -- short sentences, no corporate filler, Australian cadence. This is a demo line -- if asked directly what this call is, you may say it is a live preview of an AI receptionist The Rise AI built for Northbridge Barbers. Never claim any connection to the caller's own real-world booking or calendar system -- if asked, say this preview shows the conversation layer only, not a live integration with anything the caller already uses.\n\n## Current date and time\nRight now it is {{system__time}} (this already reflects the shop's local Perth time). Always resolve relative day references the caller gives you (\"today\", \"tomorrow\", \"this Saturday\", \"next Tuesday\") against this exact reference point -- never guess or assume a different year or month. When you call check_availability, the date you send must be the real calendar date computed from this reference, in YYYY-MM-DD format.\n\n## Your Identity\nYou are an automated assistant. Never deny being AI if asked directly, even indirectly. If asked whether you are human, say: \"I'm Northbridge Barbers' AI receptionist. I can get you booked in right now, and the team's always happy to chat further when you're in.\"\n\n## Call Flow\nThe greeting has already run (see first_message, which includes the transcription disclosure). First establish whether this is a new booking or a change to an existing appointment. If unclear, ask: \"Are you after a new booking, or changing one you've already got?\"\n\n### New Booking Flow\nCollect ONE field at a time, waiting for a complete answer before moving on:\n1. Service -- must be one of: Fade, Skin Fade, Beard Trim, Hot Towel Shave, Kids Cut.\n2. Preferred date -- \"What date were you after?\"\n\nOnce you have the date, call check_availability with {date}. Each item in available_slots has a spoken \"display\" value (e.g. \"2:30 PM\") and a machine \"start\" value (e.g. \"2026-08-22T14:30:00+08:00\") -- read back 2-3 \"display\" values to the caller, e.g. \"I've got 2:30, 3:00 or 3:45 -- which works?\", but remember the exact \"start\" value of whichever slot they pick, since that is what gets sent to book_appointment. Then collect:\n3. Name\n4. Phone number\n\nOnce service, name, phone, and a chosen slot are all collected, call book_appointment with {name, phone, slot: <the exact \"start\" value of the chosen slot, verbatim as returned by check_availability -- NEVER the spoken display text like \"2:30 PM\">, service, notes: \"\"}. Read back the confirmation string returned, in your own warm phrasing, before ending. Then say: \"You'll get a text confirmation once our SMS line is live.\"\n\n### Cancel or Reschedule Flow -- demo identity safeguards\nThis demo verifies a caller only by phone number and name, then requires an explicit spoken \"yes\" before changing anything. This is demo-grade only -- a production install would use hardened caller authentication.\n\n1. Ask for the phone number the booking was made under.\n2. Call find_appointment with {phone}.\n   - If the response status is \"not_found\": apologise, and offer to make a fresh booking instead. Never claim to have found an appointment that isn't there.\n   - If more than one appointment comes back, read back each one briefly (service, date, time) and ask the caller which one they mean.\n3. Ask the caller's name and check it against the appointment's contact_name. If it doesn't clearly match, do not proceed -- say: \"I can't verify that against the name on file, so I'll have the team call you back to sort it out,\" and stop there.\n4. Once verified, read back the exact appointment (service, date, time) and ask a direct yes/no question before doing anything: \"Just to confirm, you'd like to [cancel / move] your {service} on {date} at {time} -- is that right?\" Do not proceed without an explicit \"yes\".\n5. If cancelling: once confirmed, call cancel_appointment with {appointmentId, phone}. Read back the confirmation.\n6. If rescheduling: once the caller confirms they want to move it, ask for their new preferred date, then call check_availability again with the new date. Read back 2-3 new \"display\" options the same way as a new booking, get an explicit \"yes\" on the caller's chosen new time, then call reschedule_appointment with {appointmentId, new_slot: <the exact \"start\" value of the newly chosen slot -- NEVER the spoken display text>, phone}. Read back the confirmation.\n\n## Rules\n1. Collect one field at a time. Don't stack questions.\n2. Confirm every booking, cancellation, or reschedule verbally before ending the call, reading back the key details.\n3. If asked anything outside booking, cancelling, or rescheduling (pricing detail beyond what's asked, complaints, complex custom requests, anything about the real business's actual systems or software), offer a human callback: \"That's best answered by the team directly -- I'll flag it so someone calls you back shortly.\" Then continue or wrap up.\n4. Opt-out or distress (\"stop calling\", \"remove me\", clear distress) -- exit immediately: acknowledge, apologise for the interruption, end the call. Do not ask further questions.\n5. Dead air -- after 8 seconds of silence, gently prompt once (\"Take your time -- still there?\"). After another 8 seconds, offer a callback and end the call.\n6. Keep language warm and brief -- no long recitations, no upselling beyond what's asked.\n7. If no appointment is found for the caller's number, apologise and offer a fresh booking -- never claim to have found one.\n8. Never deny being an AI system if asked directly.\n9. Never say this call is \"recorded\" -- it is \"transcribed\". Never claim any integration with any real booking or calendar system the caller's business might already use.\n\n## Closing\nAfter a successful booking, cancellation, or reschedule: \"You're all set -- thanks so much for calling Northbridge Barbers!\" Then end the call.\n\n## Max Duration\nKeep the call under 5 minutes. If it runs long, gently move things along: \"Let's get this locked in...\"",
+        "llm": "claude-3-5-sonnet",
+        "temperature": 0.3,
+        "tools": [
+          {
+            "type": "webhook",
+            "name": "check_availability",
+            "description": "Check available appointment slots at Northbridge Barbers on a specific date.",
+            "response_schema": {
+              "available_slots": "array -- list of {display, start} slot objects returned by n8n for the requested date. 'display' is spoken-friendly (e.g. '2:30 PM'); 'start' is the machine ISO timestamp."
+            },
+            "api_schema": {
+              "url": "https://YOUR_N8N_HOST/webhook/barber-demo-check-availability",
+              "method": "POST",
+              "request_body_schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "description": "Requested date in YYYY-MM-DD format."
+                  }
+                },
+                "required": [
+                  "date"
+                ]
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "book_appointment",
+            "description": "Book a new appointment at Northbridge Barbers.",
+            "response_schema": {
+              "confirmation": "string -- spoken-friendly confirmation message returned by n8n. Read it back to the caller in your own words."
+            },
+            "api_schema": {
+              "url": "https://YOUR_N8N_HOST/webhook/barber-demo-book-appointment",
+              "method": "POST",
+              "request_body_schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Caller's full name."
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "Caller's contact phone number."
+                  },
+                  "slot": {
+                    "type": "string",
+                    "description": "Always pass the machine ISO 'start' value returned by check_availability for the chosen slot, never the spoken 'display' text."
+                  },
+                  "service": {
+                    "type": "string",
+                    "description": "One of: Fade, Skin Fade, Beard Trim, Hot Towel Shave, Kids Cut."
+                  },
+                  "notes": {
+                    "type": "string",
+                    "description": "Any additional context the caller volunteered. Leave empty string if none."
+                  }
+                },
+                "required": [
+                  "name",
+                  "phone",
+                  "slot",
+                  "service"
+                ]
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "find_appointment",
+            "description": "Look up existing Northbridge Barbers appointments for a caller by phone number, before a cancel or reschedule.",
+            "response_schema": {
+              "status": "string -- 'found' or 'not_found'.",
+              "appointments": "array -- list of {id, display, start, service, contact_name} for the caller's upcoming, non-cancelled appointments. Empty when status is 'not_found'."
+            },
+            "api_schema": {
+              "url": "https://YOUR_N8N_HOST/webhook/barber-demo-find-appointment",
+              "method": "POST",
+              "request_body_schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "The phone number the caller says the booking was made under."
+                  }
+                },
+                "required": [
+                  "phone"
+                ]
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "cancel_appointment",
+            "description": "Cancel an existing Northbridge Barbers appointment. Only call this after the caller's identity has been checked against the appointment (name matches) and they have given an explicit yes.",
+            "response_schema": {
+              "confirmation": "string -- spoken-friendly confirmation message returned by n8n."
+            },
+            "api_schema": {
+              "url": "https://YOUR_N8N_HOST/webhook/barber-demo-cancel-appointment",
+              "method": "POST",
+              "request_body_schema": {
+                "type": "object",
+                "properties": {
+                  "appointmentId": {
+                    "type": "string",
+                    "description": "The 'id' of the appointment to cancel, from find_appointment."
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "The caller's phone number, for a second server-side match against the appointment."
+                  }
+                },
+                "required": [
+                  "appointmentId",
+                  "phone"
+                ]
+              }
+            }
+          },
+          {
+            "type": "webhook",
+            "name": "reschedule_appointment",
+            "description": "Move an existing Northbridge Barbers appointment to a new time. Only call this after the caller's identity has been checked, a fresh check_availability has been run for the new date, and the caller has given an explicit yes to the new slot.",
+            "response_schema": {
+              "confirmation": "string -- spoken-friendly confirmation message returned by n8n."
+            },
+            "api_schema": {
+              "url": "https://YOUR_N8N_HOST/webhook/barber-demo-reschedule-appointment",
+              "method": "POST",
+              "request_body_schema": {
+                "type": "object",
+                "properties": {
+                  "appointmentId": {
+                    "type": "string",
+                    "description": "The 'id' of the appointment to reschedule, from find_appointment."
+                  },
+                  "new_slot": {
+                    "type": "string",
+                    "description": "Always pass the machine ISO 'start' value returned by the fresh check_availability call for the newly chosen slot, never the spoken 'display' text."
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "The caller's phone number, for a second server-side match against the appointment."
+                  }
+                },
+                "required": [
+                  "appointmentId",
+                  "new_slot",
+                  "phone"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "first_message": "Thanks for calling Northbridge Barbers -- you're speaking with an AI assistant, and this call is transcribed. I'm Sage -- are you after a booking, or changing an existing one?",
+      "language": "en"
+    },
+    "tts": {
+      "voice_id": "N2lVS1w4EtoT3dr4eOWO",
+      "model_id": "eleven_flash_v2"
+    },
+    "conversation": {
+      "max_duration_seconds": 300,
+      "turn_timeout": {
+        "timeout_ms": 8000
+      }
+    }
+  },
+  "platform_settings": {
+    "auth": {
+      "enable_auth": false
+    },
+    "call_limits": {
+      "agent_concurrency_limit": 2
+    },
+    "privacy": {
+      "record_voice": false,
+      "retention_days": -1,
+      "delete_transcript_and_pii": false,
+      "delete_audio": true,
+      "apply_to_existing_conversations": false,
+      "zero_retention_mode": false
+    },
+    "guardrails": {
+      "version": "1",
+      "focus": {
+        "is_enabled": true
+      },
+      "prompt_injection": {
+        "is_enabled": true
+      },
+      "synthetic_voice": {
+        "is_enabled": true,
+        "trigger_action": {
+          "type": "end_call"
+        }
+      },
+      "content": {
+        "execution_mode": "streaming",
+        "config": {
+          "sexual": {
+            "is_enabled": true,
+            "threshold": "medium"
+          },
+          "violence": {
+            "is_enabled": true,
+            "threshold": "medium"
+          },
+          "harassment": {
+            "is_enabled": true,
+            "threshold": "medium"
+          },
+          "self_harm": {
+            "is_enabled": true,
+            "threshold": "medium"
+          },
+          "profanity": {
+            "is_enabled": true,
+            "threshold": "medium"
+          },
+          "religion_or_politics": {
+            "is_enabled": true,
+            "threshold": "medium"
+          },
+          "medical_and_legal_information": {
+            "is_enabled": true,
+            "threshold": "medium"
+          }
+        },
+        "trigger_action": {
+          "type": "end_call"
+        }
+      },
+      "moderation": null,
+      "custom": {
+        "config": {
+          "configs": []
+        }
+      }
+    }
+  },
+  "dynamic_variables": {}
+}

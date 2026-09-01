@@ -1,0 +1,2967 @@
+{
+  "name": "[Barber Demo] Handle Agent Tools",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barber-demo-check-availability",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "bd-01-webhook-check",
+      "name": "Webhook - Check Availability",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "__WEBHOOK_1__"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://services.leadconnectorhq.com/calendars/<WORKFLOW_ID>/free-slots",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "startDate",
+              "value": "={{ DateTime.fromISO($json.body.date, {zone:'Australia/Perth'}).startOf('day').toMillis() }}"
+            },
+            {
+              "name": "endDate",
+              "value": "={{ DateTime.fromISO($json.body.date, {zone:'Australia/Perth'}).endOf('day').toMillis() }}"
+            },
+            {
+              "name": "timezone",
+              "value": "Australia/Perth"
+            }
+          ]
+        }
+      },
+      "id": "bd-02-get-freeslots",
+      "name": "Get GHL Free Slots",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        256,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// [Barber Demo] Availability Calculator (GHL free-slots backend)\nvar webhookBody = $('Webhook - Check Availability').first().json.body;\nvar preferredDate = webhookBody.date;\nvar resp = $input.first().json;\nvar dayData = resp[preferredDate];\nvar isoSlots = (dayData && dayData.slots) || [];\nfunction toDisplay(iso) {\n  var timePart = iso.split('T')[1].substring(0, 5);\n  var hh = parseInt(timePart.substring(0, 2), 10);\n  var mm = timePart.substring(3, 5);\n  var dispHour = hh > 12 ? hh - 12 : (hh === 0 ? 12 : hh);\n  var ampm = hh >= 12 ? 'PM' : 'AM';\n  return { display: dispHour + ':' + mm + ' ' + ampm, start: iso };\n}\nvar slots = isoSlots.map(toDisplay);\nreturn [{ json: {\n  available_slots: slots,\n  date: preferredDate,\n  count: slots.length,\n  message: slots.length === 0\n    ? 'No availability found on ' + preferredDate + '. Please ask the caller to suggest another date.'\n    : 'Available times on ' + preferredDate + ': ' + slots.slice(0, 3).map(function(s) { return s.display; }).join(', ') + (slots.length > 3 ? ' and more.' : '.')\n} }];"
+      },
+      "id": "bd-03-calc-slots",
+      "name": "Calculate Available Slots",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-04-cal-errored",
+      "name": "Calendar Errored?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        512,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"available_slots\": [], \"count\": 0, \"error\": \"calendar_unavailable\", \"message\": \"Sorry, I could not check the calendar right now. Please try again shortly or leave your details for a callback.\"}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "bd-05-respond-calerr",
+      "name": "Respond - Calendar Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        768,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "bd-06-respond-avail",
+      "name": "Respond - Availability",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1024,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barber-demo-book-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "bd-10-webhook-book",
+      "name": "Webhook - Book Appointment",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ],
+      "webhookId": "__WEBHOOK_2__"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "v1",
+              "leftValue": "={{ $json.body.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "v2",
+              "leftValue": "={{ $json.body.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "v3",
+              "leftValue": "={{ $json.body.slot }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "v4",
+              "leftValue": "={{ $json.body.service }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-11-validate-book",
+      "name": "Validate Booking Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"missing required fields: name, phone, slot, service\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "bd-12-respond-invalid-book",
+      "name": "Respond Invalid Booking Input",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"locationId\": \"<CALENDAR_ID>\", \"name\": $json.body.name, \"phone\": $json.body.phone, \"source\": \"Barber Demo Line (Northbridge Barbers preview)\" } }}"
+      },
+      "id": "bd-13-upsert-contact",
+      "name": "GHL Upsert Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        260
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// [Barber Demo] Prepare GHL appointment payload\nvar body = $('Webhook - Book Appointment').first().json.body;\nvar start = body.slot;\nvar d = new Date(start);\nvar endD = new Date(d.getTime() + 30 * 60000);\nvar end = endD.toISOString();\nvar contactUpsert = $('GHL Upsert Contact').first().json;\nvar contactId = (contactUpsert && contactUpsert.contact) ? contactUpsert.contact.id : null;\nvar notes = 'Rise AI Demo Booking (Northbridge Barbers)\\n\\n'\n  + 'Name: ' + body.name + '\\n'\n  + 'Phone: ' + body.phone + '\\n'\n  + 'Service: ' + body.service + '\\n'\n  + 'Requested slot: ' + start\n  + (body.notes ? ('\\nNotes: ' + body.notes) : '')\n  + '\\n\\nBooked via The Rise AI barber demo phone receptionist. DEMO CALENDAR — not a live diary.';\nreturn [{ json: {\n  calendarId: '<WORKFLOW_ID>',\n  locationId: '<CALENDAR_ID>',\n  contactId: contactId,\n  startTime: start,\n  endTime: end,\n  title: '[Barber Demo] ' + body.name + ' \\u2014 ' + body.service,\n  notes: notes,\n  appointmentStatus: 'confirmed',\n  ignoreFreeSlotValidation: true\n} }];"
+      },
+      "id": "bd-14-prepare-fields",
+      "name": "Prepare GHL Booking Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/calendars/events/appointments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}"
+      },
+      "id": "bd-15-create-appt",
+      "name": "GHL Create Appointment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        992,
+        260
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-16-booking-errored",
+      "name": "Booking Errored?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": false, \"error\": \"booking_failed\", \"message\": \"Sorry, I could not confirm that booking right now. Please try again shortly or leave your details for a callback.\"}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "bd-17-respond-bookfail",
+      "name": "Respond - Booking Failed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1504,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "owner@example.com",
+        "subject": "=New Barber Demo Booking (Northbridge Barbers preview) — {{ $('Webhook - Book Appointment').first().json.body.name }}",
+        "message": "=<h2 style=\"color:#2c3e50;font-family:Arial,sans-serif\">New Barber Demo Booking</h2><p style=\"color:#c0392b;font-weight:bold;font-family:Arial,sans-serif\">DEMO CALENDAR — not a live diary.</p><table style=\"border-collapse:collapse;width:100%;max-width:500px;font-family:Arial,sans-serif\"><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Name</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.name }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Phone</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.phone }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Service</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.service }}</td></tr><tr><td style=\"padding:10px 12px;font-weight:bold;background:#f8f9fa;border:1px solid #dee2e6\">Slot</td><td style=\"padding:10px 12px;border:1px solid #dee2e6\">{{ $('Webhook - Book Appointment').first().json.body.slot }}</td></tr></table><p style=\"color:#6c757d;font-size:13px;font-family:Arial,sans-serif;margin-top:20px\">Booked automatically via The Rise AI barber demo phone receptionist (Northbridge Barbers preview).</p>",
+        "options": {}
+      },
+      "id": "bd-18-notify-email",
+      "name": "Notify Team by Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1504,
+        200
+      ],
+      "webhookId": "__WEBHOOK_3__",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "gmailOAuth2 credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "sms_enabled",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "a1",
+              "name": "sms_provider",
+              "type": "string",
+              "value": "twilio"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "bd-19-sms-gate",
+      "name": "SMS Gate (sms_enabled=false)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.sms_enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-20-sms-enabled-if",
+      "name": "SMS Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "twilio",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-twilio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.sms_provider }}",
+                    "rightValue": "twilio"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "ghl",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-ghl",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.sms_provider }}",
+                    "rightValue": "ghl"
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "bd-21-sms-provider",
+      "name": "SMS Provider Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2272,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "from": "+61491570006",
+        "to": "={{ $('Webhook - Book Appointment').first().json.body.phone }}",
+        "message": "=The Rise AI Barber Demo: Hi {{ $('Webhook - Book Appointment').first().json.body.name }}, your {{ $('Webhook - Book Appointment').first().json.body.service }} is confirmed. — Northbridge Barbers (via The Rise AI). Reply STOP to opt out.",
+        "options": {}
+      },
+      "id": "bd-22-twilio-sms",
+      "name": "Twilio SMS Confirmation (guarded)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        40
+      ],
+      "disabled": true,
+      "credentials": {
+        "twilioApi": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "twilioApi credential"
+        }
+      },
+      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Primary SMS path once Felipe's Twilio console recovery (Wave 3 Gate A) lands. Swap in a real Twilio credential, set sms_enabled=true, and enable this node."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"type\": \"SMS\", \"contactId\": $('GHL Upsert Contact').first().json.contact.id, \"message\": \"The Rise AI Barber Demo: Hi \" + ($('Webhook - Book Appointment').first().json.body.name) + \", your \" + ($('Webhook - Book Appointment').first().json.body.service) + \" is confirmed. \\u2014 Northbridge Barbers (via The Rise AI). Reply STOP to opt out.\" } }}"
+      },
+      "id": "bd-23-ghl-sms",
+      "name": "GHL SMS Confirmation (guarded, LC Phone fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2528,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true,
+      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Optional fallback path if GHL LC Phone AU bundle clears (Wave 3 Gate B) while Twilio stays dead. Set fromNumber if required, set sms_enabled=true + sms_provider='ghl', and enable this node."
+    },
+    {
+      "parameters": {
+        "jsCode": "var d = $('Webhook - Book Appointment').first().json.body;\nvar confirmation = 'Booking confirmed! ' + d.name + ' is booked for a ' + d.service + ' at ' + d.slot + '.';\nconfirmation += ' Our team has been notified.';\nreturn [{ json: { success: true, confirmation: confirmation } }];"
+      },
+      "id": "bd-24-build-response",
+      "name": "Build Booking Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "bd-25-respond-booked",
+      "name": "Respond - Booking Confirmed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3040,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barber-demo-find-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "bd-30-webhook-find",
+      "name": "Webhook - Find Appointment",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        900
+      ],
+      "webhookId": "__WEBHOOK_4__"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.body.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-31-validate-find",
+      "name": "Validate Find Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"missing required field: phone\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "bd-32-respond-invalid-find",
+      "name": "Respond Invalid Find Input",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        1060
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"locationId\": \"<CALENDAR_ID>\", \"query\": $json.body.phone, \"pageLimit\": 10 } }}"
+      },
+      "id": "bd-33-search-contact",
+      "name": "GHL Search Contact by Phone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        780
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// [Barber Demo] Match the search result against the caller's provided phone (digit-normalized).\nvar providedPhone = $('Webhook - Find Appointment').first().json.body.phone;\nfunction digits(s) { return (s || '').replace(/\\D/g, ''); }\nvar providedDigits = digits(providedPhone);\nvar resp = $input.first().json;\nvar contacts = resp.contacts || (resp.contact ? [resp.contact] : []) || [];\nvar match = contacts.find(function(c) {\n  var cd = digits(c.phone);\n  return cd.length >= 8 && providedDigits.length >= 8 && cd.slice(-9) === providedDigits.slice(-9);\n});\nif (!match && contacts.length === 1) match = contacts[0];\nvar found = !!match;\nreturn [{ json: {\n  found: found,\n  contactId: found ? match.id : null,\n  contact_name: found ? (match.contactName || match.name || ((match.firstName || '') + ' ' + (match.lastName || '')).trim()) : null\n} }];"
+      },
+      "id": "bd-34-extract-contact",
+      "name": "Extract Contact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-35-contact-found",
+      "name": "Contact Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"not_found\", \"appointments\": []}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "bd-36-respond-notfound",
+      "name": "Respond - Appointment Not Found",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1248,
+        940
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://services.leadconnectorhq.com/calendars/events",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "<CALENDAR_ID>"
+            },
+            {
+              "name": "calendarId",
+              "value": "<WORKFLOW_ID>"
+            },
+            {
+              "name": "startTime",
+              "value": "={{ Date.now() }}"
+            },
+            {
+              "name": "endTime",
+              "value": "={{ Date.now() + 60*24*60*60*1000 }}"
+            }
+          ]
+        }
+      },
+      "id": "bd-37-list-events",
+      "name": "GHL List Calendar Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1248,
+        620
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "he1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "he2",
+              "leftValue": "={{ $json.events }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-38-has-events",
+      "name": "Has Events?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1504,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "fieldToSplitOut": "events"
+      },
+      "id": "bd-39-split-events",
+      "name": "Split Out Events",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/calendars/events/appointments/{{ $json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        }
+      },
+      "id": "bd-40-get-appt-detail",
+      "name": "GHL Get Appointment Detail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        540
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// [Barber Demo] Keep only this caller's upcoming, non-cancelled appointments on the demo calendar.\nvar target = $('Extract Contact').first().json;\nvar items = $input.all();\nvar now = Date.now();\nfunction fmt(iso) {\n  try {\n    return new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Perth', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso));\n  } catch (e) { return iso; }\n}\nvar matches = [];\nfor (var i = 0; i < items.length; i++) {\n  var raw = items[i].json;\n  var ev = raw.appointment || raw.event || raw;\n  var status = String(ev.appointmentStatus || ev.status || '').toLowerCase();\n  var evContactId = ev.contactId || (ev.contact && ev.contact.id) || null;\n  var startIso = ev.startTime || ev.start;\n  if (!ev.id || evContactId !== target.contactId) continue;\n  if (status === 'cancelled') continue;\n  if (startIso && new Date(startIso).getTime() < now) continue;\n  var title = ev.title || '';\n  var svcMatch = /\\u2014\\s*(.+)$/.exec(title);\n  var noteMatch = ev.notes ? /Service:\\s*(.+)/.exec(ev.notes) : null;\n  var service = svcMatch ? svcMatch[1].trim() : (noteMatch ? noteMatch[1].trim() : 'appointment');\n  matches.push({ id: ev.id, start: startIso, display: fmt(startIso), service: service, contact_name: target.contact_name });\n}\nmatches.sort(function(a, b) { return new Date(a.start) - new Date(b.start); });\nreturn [{ json: { status: matches.length ? 'found' : 'not_found', appointments: matches } }];"
+      },
+      "id": "bd-41-filter-format",
+      "name": "Filter & Format Appointments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "bd-42-respond-found",
+      "name": "Respond - Find Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2528,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barber-demo-cancel-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "bd-50-webhook-cancel",
+      "name": "Webhook - Cancel Appointment",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1400
+      ],
+      "webhookId": "__WEBHOOK_5__"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cv1",
+              "leftValue": "={{ $json.body.appointmentId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "cv2",
+              "leftValue": "={{ $json.body.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-51-validate-cancel",
+      "name": "Validate Cancel Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        1400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"missing required fields: appointmentId, phone\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "bd-52-respond-invalid-cancel",
+      "name": "Respond Invalid Cancel Input",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        1560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/calendars/events/appointments/{{ $json.body.appointmentId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        }
+      },
+      "id": "bd-53-get-appt",
+      "name": "GHL Get Appointment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        1280
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-54-fetch-errored",
+      "name": "Appointment Fetch Errored?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        1280
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"appointment_not_found\", \"message\": \"I could not find that appointment. Could you confirm the phone number on the booking?\"}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "bd-55-respond-notfound",
+      "name": "Respond - Appointment Not Found (Cancel)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        992,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ ($json.appointment || $json.event || $json).contactId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        }
+      },
+      "id": "bd-56-get-contact",
+      "name": "GHL Get Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        992,
+        1200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// [Barber Demo] Server-side second phone match against the appointment's contact (defense in depth --\n// the agent already checks name+phone conversationally before calling this tool).\nvar providedPhone = $('Webhook - Cancel Appointment').first().json.body.phone;\nfunction digits(s) { return (s || '').replace(/\\D/g, ''); }\nvar providedDigits = digits(providedPhone);\nvar rawAppt = $('GHL Get Appointment').first().json;\nvar appt = rawAppt.appointment || rawAppt.event || rawAppt;\nvar rawContact = $input.first().json;\nvar contact = rawContact.contact || rawContact;\nvar contactDigits = digits(contact.phone);\nvar matched = providedDigits.length >= 8 && contactDigits.length >= 8 && providedDigits.slice(-9) === contactDigits.slice(-9);\nreturn [{ json: {\n  matched: matched,\n  appointmentId: appt.id,\n  calendarId: appt.calendarId,\n  title: appt.title,\n  service: (function() { var m = /\\u2014\\s*(.+)$/.exec(appt.title || ''); return m ? m[1].trim() : 'appointment'; })(),\n  startTime: appt.startTime || appt.start\n} }];"
+      },
+      "id": "bd-57-check-phone",
+      "name": "Check Phone Match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.matched }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-58-phone-matched",
+      "name": "Phone Matched? (Cancel)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1504,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"identity_mismatch\", \"message\": \"I could not verify that against the name and phone on file, so I will have the team call you back to sort it out.\"}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "bd-59-respond-mismatch",
+      "name": "Respond - Identity Mismatch (Cancel)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/calendars/events/appointments/{{ $json.appointmentId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"appointmentStatus\": \"cancelled\" } }}"
+      },
+      "id": "bd-60-cancel-appt",
+      "name": "GHL Cancel Appointment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1040
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-61-cancel-errored",
+      "name": "Cancel Errored?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": false, \"error\": \"cancel_failed\", \"message\": \"Sorry, I could not cancel that right now. Please try again shortly or leave your details for a callback.\"}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "bd-62-respond-cancelfail",
+      "name": "Respond - Cancel Failed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2272,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "sms_enabled",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "a1",
+              "name": "sms_provider",
+              "type": "string",
+              "value": "twilio"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "bd-63-gate",
+      "name": "Cancel SMS Gate (sms_enabled=false)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2272,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.sms_enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-63-if",
+      "name": "Cancel SMS Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2528,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "twilio",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-twilio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.sms_provider }}",
+                    "rightValue": "twilio"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "ghl",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-ghl",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.sms_provider }}",
+                    "rightValue": "ghl"
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "bd-63-switch",
+      "name": "Cancel SMS Provider Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2784,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "from": "+61491570006",
+        "to": "={{ $('Webhook - Cancel Appointment').first().json.body.phone }}",
+        "message": "=The Rise AI Barber Demo: Hi, your Northbridge Barbers appointment has been cancelled as requested. (via The Rise AI.) Reply STOP to opt out.",
+        "options": {}
+      },
+      "id": "bd-63-twilio",
+      "name": "Cancel Twilio SMS (guarded)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        3040,
+        880
+      ],
+      "disabled": true,
+      "credentials": {
+        "twilioApi": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "twilioApi credential"
+        }
+      },
+      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Primary SMS path once Felipe's Twilio console recovery (Wave 3 Gate A) lands. Swap in a real Twilio credential, set sms_enabled=true, and enable this node."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"type\": \"SMS\", \"contactId\": ($('GHL Get Contact').first().json.contact || $('GHL Get Contact').first().json).id, \"message\": \"The Rise AI Barber Demo: Hi, your Northbridge Barbers appointment has been cancelled as requested. (via The Rise AI.) Reply STOP to opt out.\" } }}"
+      },
+      "id": "bd-63-ghlsms",
+      "name": "Cancel GHL SMS (guarded, LC Phone fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3040,
+        1040
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true,
+      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Optional fallback path if GHL LC Phone AU bundle clears (Wave 3 Gate B) while Twilio stays dead. Set fromNumber if required, set sms_enabled=true + sms_provider='ghl', and enable this node."
+    },
+    {
+      "parameters": {
+        "jsCode": "var p = $('Check Phone Match').first().json;\nvar confirmation = 'Done -- your ' + p.service + ' has been cancelled.';\nreturn [{ json: { success: true, confirmation: confirmation } }];"
+      },
+      "id": "bd-63-build",
+      "name": "Build Cancel Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3296,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "bd-63-respond",
+      "name": "Respond - Cancel Confirmed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3552,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barber-demo-reschedule-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "bd-70-webhook-reschedule",
+      "name": "Webhook - Reschedule Appointment",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1900
+      ],
+      "webhookId": "__WEBHOOK_6__"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "rv1",
+              "leftValue": "={{ $json.body.appointmentId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "rv2",
+              "leftValue": "={{ $json.body.new_slot }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "rv3",
+              "leftValue": "={{ $json.body.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-71-validate-reschedule",
+      "name": "Validate Reschedule Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        1900
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"missing required fields: appointmentId, new_slot, phone\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "bd-72-respond-invalid-reschedule",
+      "name": "Respond Invalid Reschedule Input",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        2060
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/calendars/events/appointments/{{ $json.body.appointmentId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        }
+      },
+      "id": "bd-73-get-appt",
+      "name": "GHL Get Appointment (Reschedule)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        1780
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-74-fetch-errored",
+      "name": "Appointment Fetch Errored? (Reschedule)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        1780
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"appointment_not_found\", \"message\": \"I could not find that appointment. Could you confirm the phone number on the booking?\"}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "bd-75-respond-notfound",
+      "name": "Respond - Appointment Not Found (Reschedule)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        992,
+        1940
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ ($json.appointment || $json.event || $json).contactId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        }
+      },
+      "id": "bd-76-get-contact",
+      "name": "GHL Get Contact (Reschedule)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        992,
+        1700
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// [Barber Demo] Server-side second phone match against the appointment's contact (defense in depth --\n// the agent already checks name+phone conversationally before calling this tool).\nvar providedPhone = $('Webhook - Reschedule Appointment').first().json.body.phone;\nfunction digits(s) { return (s || '').replace(/\\D/g, ''); }\nvar providedDigits = digits(providedPhone);\nvar rawAppt = $('GHL Get Appointment (Reschedule)').first().json;\nvar appt = rawAppt.appointment || rawAppt.event || rawAppt;\nvar rawContact = $input.first().json;\nvar contact = rawContact.contact || rawContact;\nvar contactDigits = digits(contact.phone);\nvar matched = providedDigits.length >= 8 && contactDigits.length >= 8 && providedDigits.slice(-9) === contactDigits.slice(-9);\nreturn [{ json: {\n  matched: matched,\n  appointmentId: appt.id,\n  calendarId: appt.calendarId,\n  title: appt.title,\n  service: (function() { var m = /\\u2014\\s*(.+)$/.exec(appt.title || ''); return m ? m[1].trim() : 'appointment'; })(),\n  startTime: appt.startTime || appt.start\n} }];"
+      },
+      "id": "bd-77-check-phone",
+      "name": "Check Phone Match (Reschedule)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.matched }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-78-phone-matched",
+      "name": "Phone Matched? (Reschedule)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1504,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"identity_mismatch\", \"message\": \"I could not verify that against the name and phone on file, so I will have the team call you back to sort it out.\"}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "bd-79-respond-mismatch",
+      "name": "Respond - Identity Mismatch (Reschedule)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        1860
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "var body = $('Webhook - Reschedule Appointment').first().json.body;\nvar check = $('Check Phone Match (Reschedule)').first().json;\nvar start = body.new_slot;\nvar d = new Date(start);\nvar end = new Date(d.getTime() + 30 * 60000).toISOString();\nreturn [{ json: { appointmentId: check.appointmentId, startTime: start, endTime: end, service: check.service } }];"
+      },
+      "id": "bd-80-prep-reschedule",
+      "name": "Prepare Reschedule Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        1540
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/calendars/events/appointments/{{ $json.appointmentId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"startTime\": $json.startTime, \"endTime\": $json.endTime } }}"
+      },
+      "id": "bd-81-update-appt",
+      "name": "GHL Update Appointment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        1540
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-82-reschedule-errored",
+      "name": "Reschedule Errored?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2272,
+        1540
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": false, \"error\": \"reschedule_failed\", \"message\": \"Sorry, I could not move that booking right now. Please try again shortly or leave your details for a callback.\"}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "bd-83-respond-reschedulefail",
+      "name": "Respond - Reschedule Failed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2528,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "sms_enabled",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "a1",
+              "name": "sms_provider",
+              "type": "string",
+              "value": "twilio"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "bd-84-gate",
+      "name": "Reschedule SMS Gate (sms_enabled=false)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2528,
+        1540
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.sms_enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd-84-if",
+      "name": "Reschedule SMS Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2784,
+        1540
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "twilio",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-twilio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.sms_provider }}",
+                    "rightValue": "twilio"
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "ghl",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "sw-ghl",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.sms_provider }}",
+                    "rightValue": "ghl"
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "bd-84-switch",
+      "name": "Reschedule SMS Provider Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3040,
+        1460
+      ]
+    },
+    {
+      "parameters": {
+        "from": "+61491570006",
+        "to": "={{ $('Webhook - Reschedule Appointment').first().json.body.phone }}",
+        "message": "=The Rise AI Barber Demo: Hi, your Northbridge Barbers appointment has been moved as requested. (via The Rise AI.) Reply STOP to opt out.",
+        "options": {}
+      },
+      "id": "bd-84-twilio",
+      "name": "Reschedule Twilio SMS (guarded)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        3296,
+        1380
+      ],
+      "disabled": true,
+      "credentials": {
+        "twilioApi": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "twilioApi credential"
+        }
+      },
+      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Primary SMS path once Felipe's Twilio console recovery (Wave 3 Gate A) lands. Swap in a real Twilio credential, set sms_enabled=true, and enable this node."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "options": {
+          "retryOnFail": true,
+          "maxTries": 3,
+          "waitBetweenTries": 400
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"type\": \"SMS\", \"contactId\": ($('GHL Get Contact (Reschedule)').first().json.contact || $('GHL Get Contact (Reschedule)').first().json).id, \"message\": \"The Rise AI Barber Demo: Hi, your Northbridge Barbers appointment has been moved as requested. (via The Rise AI.) Reply STOP to opt out.\" } }}"
+      },
+      "id": "bd-84-ghlsms",
+      "name": "Reschedule GHL SMS (guarded, LC Phone fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3296,
+        1540
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CREDENTIAL_ID__",
+          "name": "httpHeaderAuth credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "disabled": true,
+      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Optional fallback path if GHL LC Phone AU bundle clears (Wave 3 Gate B) while Twilio stays dead. Set fromNumber if required, set sms_enabled=true + sms_provider='ghl', and enable this node."
+    },
+    {
+      "parameters": {
+        "jsCode": "var p = $('Prepare Reschedule Fields').first().json;\nvar confirmation = 'Done -- your ' + p.service + ' has been moved to ' + p.startTime + '.';\nreturn [{ json: { success: true, confirmation: confirmation } }];"
+      },
+      "id": "bd-84-build",
+      "name": "Build Reschedule Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3552,
+        1540
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "bd-84-respond",
+      "name": "Respond - Reschedule Confirmed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3808,
+        1540
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook - Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Get GHL Free Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get GHL Free Slots": {
+      "main": [
+        [
+          {
+            "node": "Calendar Errored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Errored?": {
+      "main": [
+        [
+          {
+            "node": "Respond - Calendar Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculate Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Available Slots": {
+      "main": [
+        [
+          {
+            "node": "Respond - Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Book Appointment": {
+      "main": [
+        [
+          {
+            "node": "Validate Booking Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Booking Input": {
+      "main": [
+        [
+          {
+            "node": "GHL Upsert Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Booking Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Upsert Contact": {
+      "main": [
+        [
+          {
+            "node": "Prepare GHL Booking Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare GHL Booking Fields": {
+      "main": [
+        [
+          {
+            "node": "GHL Create Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Create Appointment": {
+      "main": [
+        [
+          {
+            "node": "Booking Errored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Errored?": {
+      "main": [
+        [
+          {
+            "node": "Respond - Booking Failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Team by Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Team by Email": {
+      "main": [
+        [
+          {
+            "node": "SMS Gate (sms_enabled=false)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Gate (sms_enabled=false)": {
+      "main": [
+        [
+          {
+            "node": "SMS Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Enabled?": {
+      "main": [
+        [
+          {
+            "node": "SMS Provider Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Booking Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Provider Switch": {
+      "main": [
+        [
+          {
+            "node": "Twilio SMS Confirmation (guarded)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GHL SMS Confirmation (guarded, LC Phone fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twilio SMS Confirmation (guarded)": {
+      "main": [
+        [
+          {
+            "node": "Build Booking Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL SMS Confirmation (guarded, LC Phone fallback)": {
+      "main": [
+        [
+          {
+            "node": "Build Booking Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Booking Response": {
+      "main": [
+        [
+          {
+            "node": "Respond - Booking Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Find Appointment": {
+      "main": [
+        [
+          {
+            "node": "Validate Find Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Find Input": {
+      "main": [
+        [
+          {
+            "node": "GHL Search Contact by Phone",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Find Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Search Contact by Phone": {
+      "main": [
+        [
+          {
+            "node": "Extract Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Contact": {
+      "main": [
+        [
+          {
+            "node": "Contact Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact Found?": {
+      "main": [
+        [
+          {
+            "node": "GHL List Calendar Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Appointment Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL List Calendar Events": {
+      "main": [
+        [
+          {
+            "node": "Has Events?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Events?": {
+      "main": [
+        [
+          {
+            "node": "Split Out Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Appointment Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Events": {
+      "main": [
+        [
+          {
+            "node": "GHL Get Appointment Detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Get Appointment Detail": {
+      "main": [
+        [
+          {
+            "node": "Filter & Format Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter & Format Appointments": {
+      "main": [
+        [
+          {
+            "node": "Respond - Find Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel SMS Gate (sms_enabled=false)": {
+      "main": [
+        [
+          {
+            "node": "Cancel SMS Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel SMS Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Cancel SMS Provider Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Cancel Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel SMS Provider Switch": {
+      "main": [
+        [
+          {
+            "node": "Cancel Twilio SMS (guarded)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel GHL SMS (guarded, LC Phone fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Twilio SMS (guarded)": {
+      "main": [
+        [
+          {
+            "node": "Build Cancel Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel GHL SMS (guarded, LC Phone fallback)": {
+      "main": [
+        [
+          {
+            "node": "Build Cancel Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Cancel Response": {
+      "main": [
+        [
+          {
+            "node": "Respond - Cancel Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Cancel Appointment": {
+      "main": [
+        [
+          {
+            "node": "Validate Cancel Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Cancel Input": {
+      "main": [
+        [
+          {
+            "node": "GHL Get Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Cancel Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Get Appointment": {
+      "main": [
+        [
+          {
+            "node": "Appointment Fetch Errored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointment Fetch Errored?": {
+      "main": [
+        [
+          {
+            "node": "Respond - Appointment Not Found (Cancel)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GHL Get Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Get Contact": {
+      "main": [
+        [
+          {
+            "node": "Check Phone Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Phone Match": {
+      "main": [
+        [
+          {
+            "node": "Phone Matched? (Cancel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phone Matched? (Cancel)": {
+      "main": [
+        [
+          {
+            "node": "GHL Cancel Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Identity Mismatch (Cancel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Cancel Appointment": {
+      "main": [
+        [
+          {
+            "node": "Cancel Errored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Errored?": {
+      "main": [
+        [
+          {
+            "node": "Respond - Cancel Failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel SMS Gate (sms_enabled=false)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule SMS Gate (sms_enabled=false)": {
+      "main": [
+        [
+          {
+            "node": "Reschedule SMS Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule SMS Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Reschedule SMS Provider Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Reschedule Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule SMS Provider Switch": {
+      "main": [
+        [
+          {
+            "node": "Reschedule Twilio SMS (guarded)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reschedule GHL SMS (guarded, LC Phone fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule Twilio SMS (guarded)": {
+      "main": [
+        [
+          {
+            "node": "Build Reschedule Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule GHL SMS (guarded, LC Phone fallback)": {
+      "main": [
+        [
+          {
+            "node": "Build Reschedule Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reschedule Response": {
+      "main": [
+        [
+          {
+            "node": "Respond - Reschedule Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Reschedule Appointment": {
+      "main": [
+        [
+          {
+            "node": "Validate Reschedule Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Reschedule Input": {
+      "main": [
+        [
+          {
+            "node": "GHL Get Appointment (Reschedule)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid Reschedule Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Get Appointment (Reschedule)": {
+      "main": [
+        [
+          {
+            "node": "Appointment Fetch Errored? (Reschedule)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointment Fetch Errored? (Reschedule)": {
+      "main": [
+        [
+          {
+            "node": "Respond - Appointment Not Found (Reschedule)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GHL Get Contact (Reschedule)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Get Contact (Reschedule)": {
+      "main": [
+        [
+          {
+            "node": "Check Phone Match (Reschedule)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Phone Match (Reschedule)": {
+      "main": [
+        [
+          {
+            "node": "Phone Matched? (Reschedule)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phone Matched? (Reschedule)": {
+      "main": [
+        [
+          {
+            "node": "Prepare Reschedule Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Identity Mismatch (Reschedule)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Reschedule Fields": {
+      "main": [
+        [
+          {
+            "node": "GHL Update Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL Update Appointment": {
+      "main": [
+        [
+          {
+            "node": "Reschedule Errored?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule Errored?": {
+      "main": [
+        [
+          {
+            "node": "Respond - Reschedule Failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reschedule SMS Gate (sms_enabled=false)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

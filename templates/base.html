@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}The Rise AI — Receptionist Demo{% endblock %}</title>
+
+  <!-- Preload brand fonts to minimise first-paint delay -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="font" type="font/woff2"
+        href="https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHTWEBlw.woff2"
+        crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap">
+
+  <link rel="stylesheet" href="{{ url_for('static', path='/brand.css') }}">
+  {% block extra_head %}{% endblock %}
+
+  <!-- HTMX 1.x + matching SSE extension. 2.x renamed attrs; do not bump. -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/sse.js"></script>
+</head>
+<body>
+  {% block content %}{% endblock %}
+  {% block scripts %}<script src="{{ url_for('static', path='/demo.js') }}?v=task003" defer></script>{% endblock %}
+</body>
+</html>

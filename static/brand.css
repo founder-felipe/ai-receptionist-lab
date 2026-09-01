@@ -1,0 +1,417 @@
+/* ============================================================
+   The Rise AI — Receptionist Demo
+   Brand tokens: Warm Black + Amber Gold, Cormorant + DM Sans
+   ============================================================ */
+
+:root {
+  --warm-black: #0F0F0F;
+  --amber-gold: #F4A300;
+  --paper:      #F5EFE5;
+  --text:       #E8E2D6;
+  --muted:      #9A9286;
+  --accent-red: #C44536;
+
+  --panel-bg:    #161616;
+  --panel-bg-2:  #1d1d1d;
+  --border:      #2a2a2a;
+
+  --radius-sm: 4px;
+  --radius:    8px;
+  --radius-lg: 14px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans:  "DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--warm-black);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--paper);
+  margin: 0;
+}
+
+h1 { font-size: 2.2rem; }
+h2 { font-size: 1.4rem; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  background: var(--warm-black);
+}
+.topbar__brand { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.wordmark {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: 0.85rem;
+  color: var(--amber-gold);
+}
+.topbar__sep { color: var(--muted); }
+.venue-name {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  color: var(--paper);
+}
+.topbar__tagline {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* MODE pill */
+.mode-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.mode-pill--mock { background: var(--amber-gold); color: var(--warm-black); }
+.mode-pill--live { background: var(--accent-red); color: white; }
+
+/* ---------- Grid layout ---------- */
+.grid {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "call"
+    "transcript"
+    "sms"
+    "notify"
+    "leads";
+  /* prevent grid tracks from inflating beyond the viewport */
+  overflow-x: clip;
+}
+.panel--call       { grid-area: call; }
+.panel--transcript { grid-area: transcript; }
+.panel--sms        { grid-area: sms; }
+.panel--notify     { grid-area: notify; }
+.panel--leads      { grid-area: leads; }
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "call       sms"
+      "transcript notify"
+      "leads      leads";
+  }
+}
+
+/* ---------- Panel ---------- */
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 200px;
+  /* allow panel to shrink below content min-width inside grid */
+  min-width: 0;
+}
+.panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.panel__title {
+  font-family: var(--font-serif);
+  color: var(--paper);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.panel__empty {
+  color: var(--muted);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ---------- Call card ---------- */
+.call-card { display: flex; flex-direction: column; gap: var(--space-4); }
+.call-card__phone {
+  display: flex; align-items: center; gap: var(--space-3);
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  color: var(--paper);
+}
+.phone-icon { color: var(--amber-gold); font-size: 1.8rem; }
+
+.call-card__status {
+  display: flex; align-items: center; gap: var(--space-2);
+  color: var(--muted); font-size: 0.85rem;
+}
+.call-card__status[data-status="ringing"] .dot--idle {
+  background: var(--amber-gold);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  padding: var(--space-3) var(--space-5);
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, opacity 120ms ease;
+  font-size: 0.95rem;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary {
+  background: var(--amber-gold);
+  color: var(--warm-black);
+  font-weight: 700;
+}
+.btn--primary:hover { filter: brightness(1.06); }
+.btn--ring { font-size: 1.05rem; padding: var(--space-4) var(--space-5); }
+.btn--ghost {
+  background: transparent;
+  color: var(--paper);
+  border-color: var(--border);
+}
+.btn--ghost:hover { background: var(--panel-bg-2); }
+.btn--accent {
+  background: var(--panel-bg-2);
+  color: var(--amber-gold);
+  border-color: var(--amber-gold);
+}
+.btn--accent:hover { background: var(--amber-gold); color: var(--warm-black); }
+.btn--reset {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+}
+.btn--reset:hover { color: var(--accent-red); border-color: var(--accent-red); }
+
+/* ---------- Transcript ---------- */
+.transcript {
+  flex: 1;
+  min-height: 220px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--panel-bg-2);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.transcript-line {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  max-width: 80%;
+  word-wrap: break-word;
+}
+.transcript-line__role {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.transcript-line--ai {
+  align-self: flex-start;
+  background: rgba(244, 163, 0, 0.12);
+  border-left: 2px solid var(--amber-gold);
+}
+.transcript-line--user {
+  align-self: flex-end;
+  background: rgba(232, 226, 214, 0.06);
+  border-right: 2px solid var(--paper);
+  text-align: right;
+}
+
+.transcript__controls { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.utterance-form { display: flex; gap: var(--space-2); }
+.input {
+  flex: 1;
+  padding: var(--space-3);
+  background: var(--panel-bg-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+}
+.input:focus { outline: none; border-color: var(--amber-gold); }
+
+.scenario-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.scenario-row__label { color: var(--muted); font-size: 0.85rem; }
+.scenario-row__count { color: var(--muted); font-size: 0.8rem; }
+.select {
+  background: var(--panel-bg-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+}
+
+/* ---------- SMS card ---------- */
+.sms-stream { display: flex; flex-direction: column; gap: var(--space-3); }
+.sms-card {
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber-gold);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sms-card__header {
+  display: flex; align-items: center; gap: var(--space-2);
+  color: var(--amber-gold);
+}
+.sms-card__icon { color: var(--amber-gold); }
+.sms-card__title { font-weight: 600; }
+.sms-card__row { color: var(--muted); font-size: 0.85rem; }
+.sms-card__label { color: var(--muted); margin-right: 4px; }
+.sms-card__body {
+  color: var(--paper);
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-style: italic;
+}
+
+/* ---------- Notify cards ---------- */
+.notify-stream { display: flex; flex-direction: column; gap: var(--space-2); }
+.notify-card {
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.notify-card__channel {
+  font-weight: 600;
+  color: var(--paper);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+}
+.notify-card__status {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Status dots ---------- */
+.dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.dot--green  { background: #4caf50; }
+.dot--yellow { background: #f4c542; }
+.dot--idle   { background: var(--muted); }
+
+/* ---------- Badges ---------- */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.badge--sent    { background: #4caf50; color: white; }
+.badge--pending { background: var(--muted); color: var(--warm-black); }
+
+/* ---------- Leads table ---------- */
+#leads-wrap {
+  overflow-x: auto;
+}
+
+.leads-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.leads-table thead th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+}
+.leads-table tbody td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.lead-row--followup { background: rgba(244, 197, 66, 0.05); }
+
+/* ---------- Animations ---------- */
+@keyframes pulse {
+  0%   { transform: scale(1);    opacity: 1;   }
+  50%  { transform: scale(1.08); opacity: 0.7; }
+  100% { transform: scale(1);    opacity: 1;   }
+}
+.pulse { animation: pulse 600ms ease-in-out; }
+
+@keyframes slide-in {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.sms-card--sent,
+.notify-card,
+.lead-row {
+  animation: slide-in 400ms ease-out;
+}
+
+/* ---------- Accessibility ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .pulse, .sms-card--sent, .notify-card, .lead-row,
+  .call-card__status[data-status="ringing"] .dot--idle {
+    animation: none !important;
+  }
+}

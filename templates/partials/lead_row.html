@@ -1,0 +1,21 @@
+<tr class="lead-row lead-row--{{ 'followup' if needs_followup else 'ok' }}">
+  <td class="lead-row__time">{{ created_at|default('—') }}</td>
+  <td class="lead-row__name">{{ name|default('—') }}</td>
+  <td class="lead-row__service">{{ service|default('—') }}</td>
+  <td class="lead-row__time-requested">{{ requested_time|default('—') }}</td>
+  <td class="lead-row__phone">{{ phone|default('—') }}</td>
+  <td class="lead-row__link">
+    {% if link_sent %}
+      <span class="badge badge--sent">sent</span>
+    {% else %}
+      <span class="badge badge--pending">pending</span>
+    {% endif %}
+  </td>
+  <td class="lead-row__status">
+    {% if needs_followup %}
+      <span class="dot dot--yellow"></span> needs follow-up
+    {% else %}
+      <span class="dot dot--green"></span> booked
+    {% endif %}
+  </td>
+</tr>

@@ -1,0 +1,43 @@
+# AI Receptionist Demo — pinned dependencies
+# Python 3.12 / 3.13 / 3.14 verified in CI. Each pin's purpose is noted inline below.
+
+# Web framework
+fastapi==0.136.3
+uvicorn[standard]==0.48.0
+
+# Templating
+jinja2==3.1.6
+
+# SSE / async streams
+sse-starlette==3.4.4
+anyio==4.13.0
+
+# Env config
+pydantic-settings==2.14.1
+python-dotenv==1.2.2
+
+# HTTP client (GHL + TestClient)
+httpx==0.28.1
+
+# Async file I/O
+aiofiles==25.1.0
+
+# YAML venue config
+pyyaml==6.0.3
+
+# Phone normalisation
+phonenumbers==9.0.31
+
+# Datetime parsing (supports RELATIVE_BASE + tz)
+dateparser==1.4.0
+
+# Gemini brain — model: gemini-2.5-flash
+google-generativeai==0.8.6
+
+# Tests
+pytest==9.0.3
+pytest-asyncio==1.4.0
+
+# Lint / typecheck
+ruff==0.15.15
+mypy==2.1.0

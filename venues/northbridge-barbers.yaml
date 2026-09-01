@@ -1,0 +1,25 @@
+# Northbridge Barbers — demo venue config.
+# Loaded by config.VENUE_CONFIG_PATH; consumed by state_handler + agents.
+
+name: Northbridge Barbers
+phone: "+61 491 570 006"
+booking_link: https://example.com/book/northbridge-barbers
+
+owner:
+  email: owner@example.com
+  ghl_pipeline_id: null
+  ghl_stage_id: null
+
+services:
+  - Fade
+  - Skin Fade
+  - Beard Trim
+  - Hot Towel Shave
+  - Kids Cut
+
+hours:
+  mon-fri: "09:00-19:00"
+  sat: "08:00-17:00"
+  sun: closed
+
+timezone: Australia/Perth
