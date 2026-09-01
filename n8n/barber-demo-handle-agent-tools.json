@@ -567,7 +567,7 @@
           "name": "twilioApi credential"
         }
       },
-      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Primary SMS path once Felipe's Twilio console recovery (Wave 3 Gate A) lands. Swap in a real Twilio credential, set sms_enabled=true, and enable this node."
+      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -609,7 +609,7 @@
       },
       "onError": "continueRegularOutput",
       "disabled": true,
-      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Optional fallback path if GHL LC Phone AU bundle clears (Wave 3 Gate B) while Twilio stays dead. Set fromNumber if required, set sms_enabled=true + sms_provider='ghl', and enable this node."
+      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -1505,7 +1505,7 @@
           "name": "twilioApi credential"
         }
       },
-      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Primary SMS path once Felipe's Twilio console recovery (Wave 3 Gate A) lands. Swap in a real Twilio credential, set sms_enabled=true, and enable this node."
+      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -1547,7 +1547,7 @@
       },
       "onError": "continueRegularOutput",
       "disabled": true,
-      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Optional fallback path if GHL LC Phone AU bundle clears (Wave 3 Gate B) while Twilio stays dead. Set fromNumber if required, set sms_enabled=true + sms_provider='ghl', and enable this node."
+      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -2110,7 +2110,7 @@
           "name": "twilioApi credential"
         }
       },
-      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Primary SMS path once Felipe's Twilio console recovery (Wave 3 Gate A) lands. Swap in a real Twilio credential, set sms_enabled=true, and enable this node."
+      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Primary SMS path. To enable: attach a real SMS-provider credential, set sms_enabled=true on all three gates, and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {
@@ -2152,7 +2152,7 @@
       },
       "onError": "continueRegularOutput",
       "disabled": true,
-      "notes": "GUARDED — disabled + gated behind sms_enabled=false. Optional fallback path if GHL LC Phone AU bundle clears (Wave 3 Gate B) while Twilio stays dead. Set fromNumber if required, set sms_enabled=true + sms_provider='ghl', and enable this node."
+      "notes": "GUARDED — disabled and gated behind sms_enabled=false. Optional fallback SMS path via the CRM provider's own phone system. Set fromNumber if required, set sms_enabled=true and sms_provider='ghl', and enable this node. See docs/runbook-live-pilot.md section 3."
     },
     {
       "parameters": {

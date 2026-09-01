@@ -18,7 +18,7 @@ All backend tests below ran against a live n8n workflow
 
 ---
 
-## Wave 1 — backend curl tests with calendar read-back
+## Backend webhook tests, with calendar read-back
 
 **Class: recorded-in-log** for every result in this section. Each test issued a
 webhook POST and then a *separate, fresh* read against the GHL API, so a
@@ -124,11 +124,14 @@ conversational check. **Class: verified** — the check is in the workflow.
 
 ---
 
-## Wave 2 — agent, simulated suite, real conversations
+## Agent tests: simulated suite and real conversations
 
 Widget URL returned HTTP 200. A live `GET` confirmed
 `platform_settings.privacy.record_voice: false` — no audio captured at any
-point, transcript-only. **Class: verified** (read from the live API response).
+point, transcript-only. **Class: verified** (read from the live API response;
+the same value is in `agents/elevenlabs/barber-agent-config.json`). The other
+privacy fields only govern audio that was recorded, so `record_voice: false`
+is the whole guarantee.
 
 ### Simulated-conversation suite — recorded-in-log, not a test suite
 

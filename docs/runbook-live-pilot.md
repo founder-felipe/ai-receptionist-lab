@@ -41,12 +41,17 @@ someone else's tenant.
 
 Agent privacy settings to verify with a live `GET` after creation:
 
-- `platform_settings.privacy.record_voice: false` — no audio is captured at
-  all, transcript-only. (`delete_audio` staying `false` is moot when
-  `record_voice` is `false`: there is nothing to delete.)
-- `platform_settings.guardrails` — the reference config enables all ten
-  toggles (`focus`, `prompt_injection`, `synthetic_voice`, and the seven
-  content-moderation categories) at `threshold: "medium"` with
+- `platform_settings.privacy.record_voice: false` — this is the load-bearing
+  setting: no audio is captured at all, so the deployment is transcript-only.
+  The other privacy fields (`delete_audio`, `retention_days`) only govern
+  audio that was recorded in the first place, so they are moot here — do not
+  cite them as the privacy guarantee.
+- `platform_settings.guardrails` — the reference config in
+  `agents/elevenlabs/barber-agent-config.json` enables ten toggles: `focus`,
+  `prompt_injection`, `synthetic_voice` (`trigger_action: end_call`), and the
+  seven `content` moderation categories (`sexual`, `violence`, `harassment`,
+  `self_harm`, `profanity`, `religion_or_politics`,
+  `medical_and_legal_information`), each `threshold: "medium"` with
   `trigger_action: end_call`. These default to **off/unconfigured** in the
   ElevenLabs API, so they must be set explicitly.
 

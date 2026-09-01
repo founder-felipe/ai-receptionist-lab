@@ -19,9 +19,8 @@ if str(ROOT) not in sys.path:
 def _install_stub_settings(monkeypatch: pytest.MonkeyPatch, **overrides: Any) -> Any:
     """Install a stub ``config`` module exposing ``settings`` for tests.
 
-    Wave 1.A owns the real ``config.py``. This stub keeps W1.B tests
-    runnable in isolation and is overridden the moment the real module
-    is importable on sys.path.
+    Keeps these tests runnable in isolation; the stub is overridden the
+    moment the real ``config`` module is importable on sys.path.
     """
     try:
         import config as real_config  # type: ignore[import-not-found]
@@ -80,8 +79,8 @@ def tmp_leads_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def mock_gemini() -> Any:
     """Stub Gemini brain returning canned replies keyed by state.
 
-    Wave 2.A may extend or replace this fixture; for W1.B it just needs
-    to exist so other waves can depend on the name.
+    Deterministic stand-in for the model call, so the state machine can be
+    exercised without credentials or network access.
     """
 
     class _StubGemini:
