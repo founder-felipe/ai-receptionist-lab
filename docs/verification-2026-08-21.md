@@ -204,17 +204,25 @@ problem and not workflow logic: the other four parallel calls used the
 identical credential and succeeded, and an immediate retry of the same
 `find_appointment` succeeded.
 
-**Addressed** by adding `retryOnFail: true, maxTries: 3, waitBetweenTries: 400`
-as a node-level n8n setting to all 15 `httpRequest` nodes that call the
-calendar API. Redeployed, reactivated, full five-flow matrix re-run fresh with
-read-backs — all green.
+**Addressed on the day** by adding `retryOnFail: true, maxTries: 3,
+waitBetweenTries: 400` to all 15 `httpRequest` nodes that call the calendar
+API; redeployed, reactivated, full five-flow matrix re-run fresh with
+read-backs — all green. **Class: recorded-in-log** for this sentence — it
+states what happened in that session, not what this repository's export
+currently carries.
 
-*Verified:* the setting is present at node level (the tier n8n reads) on all
-15 nodes, countable in this repo. *Recorded-in-log:* the post-fix five-flow
-re-run above was green. *Not tested:* no run in this session or in this repo
-independently induced a `401` and observed a retry fire — the fix's presence
-and the green re-run are the only evidence, not a reproduction of the retry
-itself.
+*Verified:* in **this** export, the three keys sit at node level (the tier
+n8n reads, the same tier as this export's own `onError`) on all 15 nodes,
+countable in this repo. *Recorded-in-log:* the post-fix five-flow re-run on
+2026-08-21 was green. *Correction (2026-09-01):* in the export produced by
+that session the three keys sat under `parameters.options`, which n8n does
+not read for retry; this repository moves them to node level (see commit
+history for `n8n/barber-demo-handle-agent-tools.json`). The 2026-08-21 re-run
+therefore ran without an effective retry and is evidence of no regression
+only, not of the retry working. *Not tested:* no run in this session or in
+this repo independently induced a `401` and observed a retry fire — the
+fix's presence and the green re-run are the only evidence, not a
+reproduction of the retry itself.
 
 The fix is in this repo (see the verification snippet in
 [`runbook-live-pilot.md` §2](./runbook-live-pilot.md#retry-hardening)):
@@ -314,8 +322,9 @@ all green with fresh calendar read-backs, plus real-conversation proof and
 compliance proof. Two real bugs were found during verification — neither
 would have surfaced without running the thing live against a real calendar.
 Bug 1 (date grounding) was fixed and the fix confirmed by a fresh, targeted
-re-test of the exact failing scenario. Bug 2 (transient 401) was addressed at
-the node-configuration level and the full five-flow matrix re-run green
+re-test of the exact failing scenario. Bug 2 (transient 401) was addressed
+with retry settings that, as deployed that day, n8n did not honour —
+corrected in this repository — and the full five-flow matrix re-run green
 afterward, but that re-run did not reproduce the intermittent 401, so it
 confirms no regression rather than confirming the retry mechanism itself
 fired and resolved the failure — see Bug 2 above for the bounded claim.

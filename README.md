@@ -81,12 +81,13 @@ Both are the reason this repo exists as a lab rather than a slide.
    detail request per calendar event. One of five near-simultaneous requests
    intermittently returned `401 "Command timed out"` from the provider — the
    other four, same credential, succeeded. The symptom was a booking that
-   "didn't exist". Addressed with `retryOnFail: true, maxTries: 3,
-   waitBetweenTries: 400` set as a node-level n8n setting on all 15
-   calendar-calling HTTP nodes. Verified: the setting is present at the tier
-   n8n reads it, on all 15 nodes. Recorded-in-log: the post-fix five-flow
-   re-run on 2026-08-21 was green. Not tested: no run in this repo or that
-   session induced a `401` and watched a retry fire — see
+   "didn't exist". Addressed on the day with `retryOnFail: true, maxTries: 3,
+   waitBetweenTries: 400` on all 15 calendar-calling HTTP nodes — placed, it
+   later turned out, under `parameters.options`, where n8n ignores it. This
+   repo carries the setting at node level, the tier n8n reads (verified,
+   15/15). The post-fix five-flow re-run on 2026-08-21 was green
+   (recorded-in-log) but ran without an effective retry; no run anywhere
+   induced a `401` and watched a retry fire (not tested) — see
    [`CLAIMS.md`](./CLAIMS.md), RC-2.
 
 Neither is exotic. Neither was catchable with mocks.

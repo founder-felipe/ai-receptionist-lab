@@ -60,7 +60,7 @@ ok=[n for n in http if n.get('retryOnFail') is True
     and n.get('maxTries')==3
     and n.get('waitBetweenTries')]
 print(len(ok),'/',len(http),'retry-hardened (node-level);',len(d['nodes']),'nodes')"
-# 15 / 15 retry-hardened; 76 nodes
+# 15 / 15 retry-hardened (node-level); 76 nodes
 ```
 
 **What "verified" covers and what it does not:** *verified* — this export
@@ -68,10 +68,15 @@ carries `retryOnFail: true, maxTries: 3, waitBetweenTries: 400` as node-level
 n8n settings (the tier n8n actually reads, the same tier as this export's own
 `onError`) on all 15 calendar-calling HTTP nodes. *Recorded-in-log* — the
 post-fix five-flow re-run on 2026-08-21 was green (see the verification log).
-Neither this repository nor that log independently exercised the retry path
-itself: no test in this tree, or in the 2026-08-21 session, induced a `401`
-and observed a retry fire. "Addressed" is bounded by those two facts — it is
-not a claim that retries were exercised end-to-end.
+*Correction (2026-09-01):* in the export produced by that 2026-08-21 session
+the three keys sat under `parameters.options`, which n8n does not read for
+retry; this repository moves them to node level (see commit history for
+`n8n/barber-demo-handle-agent-tools.json`). The 2026-08-21 re-run therefore
+ran without an effective retry and is evidence of no regression only, not of
+the retry working. Neither this repository nor that log independently
+exercised the retry path itself: no test in this tree, or in the 2026-08-21
+session, induced a `401` and observed a retry fire. "Addressed" is bounded by
+those two facts — it is not a claim that retries were exercised end-to-end.
 
 Evidence: [`docs/verification-2026-08-21.md`](./docs/verification-2026-08-21.md).
 
