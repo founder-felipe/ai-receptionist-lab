@@ -21,7 +21,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "https://services.leadconnectorhq.com/calendars/<WORKFLOW_ID>/free-slots",
+        "url": "https://services.leadconnectorhq.com/calendars/<CALENDAR_ID>/free-slots",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -267,7 +267,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"locationId\": \"<CALENDAR_ID>\", \"name\": $json.body.name, \"phone\": $json.body.phone, \"source\": \"Barber Demo Line (Northbridge Barbers preview)\" } }}"
+        "jsonBody": "={{ { \"locationId\": \"<LOCATION_ID>\", \"name\": $json.body.name, \"phone\": $json.body.phone, \"source\": \"Barber Demo Line (Northbridge Barbers preview)\" } }}"
       },
       "id": "bd-13-upsert-contact",
       "name": "GHL Upsert Contact",
@@ -287,7 +287,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// [Barber Demo] Prepare GHL appointment payload\nvar body = $('Webhook - Book Appointment').first().json.body;\nvar start = body.slot;\nvar d = new Date(start);\nvar endD = new Date(d.getTime() + 30 * 60000);\nvar end = endD.toISOString();\nvar contactUpsert = $('GHL Upsert Contact').first().json;\nvar contactId = (contactUpsert && contactUpsert.contact) ? contactUpsert.contact.id : null;\nvar notes = 'Rise AI Demo Booking (Northbridge Barbers)\\n\\n'\n  + 'Name: ' + body.name + '\\n'\n  + 'Phone: ' + body.phone + '\\n'\n  + 'Service: ' + body.service + '\\n'\n  + 'Requested slot: ' + start\n  + (body.notes ? ('\\nNotes: ' + body.notes) : '')\n  + '\\n\\nBooked via The Rise AI barber demo phone receptionist. DEMO CALENDAR — not a live diary.';\nreturn [{ json: {\n  calendarId: '<WORKFLOW_ID>',\n  locationId: '<CALENDAR_ID>',\n  contactId: contactId,\n  startTime: start,\n  endTime: end,\n  title: '[Barber Demo] ' + body.name + ' \\u2014 ' + body.service,\n  notes: notes,\n  appointmentStatus: 'confirmed',\n  ignoreFreeSlotValidation: true\n} }];"
+        "jsCode": "// [Barber Demo] Prepare GHL appointment payload\nvar body = $('Webhook - Book Appointment').first().json.body;\nvar start = body.slot;\nvar d = new Date(start);\nvar endD = new Date(d.getTime() + 30 * 60000);\nvar end = endD.toISOString();\nvar contactUpsert = $('GHL Upsert Contact').first().json;\nvar contactId = (contactUpsert && contactUpsert.contact) ? contactUpsert.contact.id : null;\nvar notes = 'Rise AI Demo Booking (Northbridge Barbers)\\n\\n'\n  + 'Name: ' + body.name + '\\n'\n  + 'Phone: ' + body.phone + '\\n'\n  + 'Service: ' + body.service + '\\n'\n  + 'Requested slot: ' + start\n  + (body.notes ? ('\\nNotes: ' + body.notes) : '')\n  + '\\n\\nBooked via The Rise AI barber demo phone receptionist. DEMO CALENDAR — not a live diary.';\nreturn [{ json: {\n  calendarId: '<CALENDAR_ID>',\n  locationId: '<LOCATION_ID>',\n  contactId: contactId,\n  startTime: start,\n  endTime: end,\n  title: '[Barber Demo] ' + body.name + ' \\u2014 ' + body.service,\n  notes: notes,\n  appointmentStatus: 'confirmed',\n  ignoreFreeSlotValidation: true\n} }];"
       },
       "id": "bd-14-prepare-fields",
       "name": "Prepare GHL Booking Fields",
@@ -727,7 +727,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"locationId\": \"<CALENDAR_ID>\", \"query\": $json.body.phone, \"pageLimit\": 10 } }}"
+        "jsonBody": "={{ { \"locationId\": \"<LOCATION_ID>\", \"query\": $json.body.phone, \"pageLimit\": 10 } }}"
       },
       "id": "bd-33-search-contact",
       "name": "GHL Search Contact by Phone",
@@ -835,11 +835,11 @@
           "parameters": [
             {
               "name": "locationId",
-              "value": "<CALENDAR_ID>"
+              "value": "<LOCATION_ID>"
             },
             {
               "name": "calendarId",
-              "value": "<WORKFLOW_ID>"
+              "value": "<CALENDAR_ID>"
             },
             {
               "name": "startTime",

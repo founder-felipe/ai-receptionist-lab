@@ -75,7 +75,7 @@ Caller: *"Sunday afternoon, say 2pm?"*
 (Sunday is closed.)
 You say: *"Sundays we're closed — Saturday 2pm work instead?"*
 
-Caller: *"Sam, oh-four-hundred triple-five-oh-three-seven."*
+Caller: *"Sam, oh-four-nine-one, five-seven-oh, double-oh-six."*
 You call: `capture_field("name", "Sam")` then
 `capture_field("phone", "0491 570 006")`
 You say: *"Thanks Sam — sending the booking link now."*

@@ -1,5 +1,5 @@
 # AI Receptionist Demo — pinned dependencies
-# Python 3.12 / 3.13 / 3.14 verified in CI. Each pin's purpose is noted inline below.
+# Targeted in CI on Python 3.12 / 3.13 / 3.14; verified locally on 3.11 and 3.14. Each pin's purpose is noted inline below.
 
 # Web framework
 fastapi==0.136.3

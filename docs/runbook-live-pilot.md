@@ -31,6 +31,7 @@ someone else's tenant.
 |---|---|---|
 | GHL calendar name | `Barbershop DEMO Calendar (not a live diary)` | Label it visibly as a demo calendar so nobody mistakes it for the venue's real diary. |
 | GHL calendar ID | `<CALENDAR_ID>` | |
+| GHL location ID | `<LOCATION_ID>` | |
 | GHL credential (in n8n) | `<CREDENTIAL_ID>` | Stored in the n8n credential store, never in the exported workflow JSON. |
 | n8n workflow name | `[Barber Demo] Handle Agent Tools` | |
 | n8n workflow ID | `<WORKFLOW_ID>` | |
